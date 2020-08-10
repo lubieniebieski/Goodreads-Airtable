@@ -74,97 +74,97 @@ class Book < Airrecord::Table
 
   private
 
-    def create_cover(book)
-      [
-        {
-          "url": book.image_url
-        }
-      ]
+  def create_cover(book)
+    [
+      {
+        "url": book.image_url
+      }
+    ]
+  end
+
+  def create_categories(categories)
+    category_ids = []
+    existing_categories = Category.all
+    categories.each do |category|
+      existing_category = existing_categories.find { |a| a['Name'] == category }
+      category_ids <<
+        if existing_category
+          existing_category.id
+        else
+          Category.create('Name' => category).id
+        end
     end
+    category_ids
+  end
 
-    def create_categories(categories)
-      category_ids = []
-      existing_categories = Category.all
-      categories.each do |category|
-        existing_category = existing_categories.find { |a| a['Name'] == category }
-        category_ids <<
-          if existing_category
-            existing_category.id
-          else
-            Category.create('Name' => category).id
-          end
-      end
-      category_ids
+  def goodreads_categories(n = 5)
+    popular = goodreads_book.popular_shelves
+    return [] if popular.blank?
+
+    shelves = popular.shelf
+    return [] unless shelves.first.respond_to?(:name)
+
+    shelves.map(&:name).reject do |name|
+      GOODREADS_BLACKLIST.include?(name)
+    end.first(n).map do |name|
+      name = name.capitalize
+      name = GOODREADS_MERGE[name] if GOODREADS_MERGE[name]
+      (CATEGORIES.include?(name) && name) || nil
+    end.compact.uniq
+  end
+
+  def goodreads_id
+    query = self['ISBN'] if self['ISBN']
+    query ||= "\"#{self['Title']}\""
+
+    search = goodreads_client.search_books(query)
+    if search.results.respond_to?(:work)
+      matches = [search.results.work].flatten
+
+      best_match ||= matches.first
+      return unless best_match
+
+      best_match.best_book.id
     end
+  end
 
-    def goodreads_categories(n = 5)
-      popular = goodreads_book.popular_shelves
-      return [] if popular.blank?
+  def goodreads_book
+    goodreads_client.book(goodreads_id)
+  end
 
-      shelves = popular.shelf
-      return [] unless shelves.first.respond_to?(:name)
+  def goodreads_client
+    GoodreadsClient::Client
+  end
 
-      shelves.map(&:name).reject do |name|
-        GOODREADS_BLACKLIST.include?(name)
-      end.first(n).map do |name|
-        name = name.capitalize
-        name = GOODREADS_MERGE[name] if GOODREADS_MERGE[name]
-        (CATEGORIES.include?(name) && name) || nil
-      end.compact.uniq
+  # Create or find Series
+  def create_series(title)
+    return [], nil unless title[/\((.*?)\)/]
+
+    series_title_with_number = title[/\((.*?)\)/][1..-2]
+    series_title = series_title_with_number.split('#')[0].tr('^a-zA-Z ', '').strip
+    series_number = series_title_with_number.split('#')[1].to_s.tr('^0-9.-', '')
+
+    existing_serie = Serie.all.find { |a| a['Title'] == series_title }
+    if existing_serie
+      [[existing_serie.id], series_number]
+    else
+      [[Serie.create('Title' => series_title).id], series_number]
     end
+  end
 
-    def goodreads_id
-      query = self['ISBN'] if self['ISBN']
-      query ||= "\"#{self['Title']}\""
-
-      search = goodreads_client.search_books(query)
-      if search.results.respond_to?(:work)
-        matches = [search.results.work].flatten
-
-        best_match ||= matches.first
-        return unless best_match
-
-        best_match.best_book.id
-      end
+  # Create or find author
+  def create_author(authors)
+    author_ids       = []
+    existing_authors = Author.all
+    authors.each do |author|
+      existing_author = existing_authors.find { |a| a['Name'] == author.name }
+      author_ids <<
+        if existing_author
+          existing_author.id
+        else
+          Author.create('Name' => author.name).id
+        end
     end
-
-    def goodreads_book
-      goodreads_client.book(goodreads_id)
-    end
-
-    def goodreads_client
-      GoodreadsClient::Client
-    end
-
-    # Create or find Series
-    def create_series(title)
-      return [], nil unless title[/\((.*?)\)/]
-
-      series_title_with_number = title[/\((.*?)\)/][1..-2]
-      series_title = series_title_with_number.split('#')[0].tr('^a-zA-Z ', '').strip
-      series_number = series_title_with_number.split('#')[1].to_s.tr('^0-9.-', '')
-
-      existing_serie = Serie.all.find { |a| a['Title'] == series_title }
-      if existing_serie
-        [[existing_serie.id], series_number]
-      else
-        [[Serie.create('Title' => series_title).id], series_number]
-      end
-    end
-
-    # Create or find author
-    def create_author(authors)
-      author_ids       = []
-      existing_authors = Author.all
-      authors.each do |author|
-        existing_author = existing_authors.find { |a| a['Name'] == author.name }
-        author_ids <<
-          if existing_author
-            existing_author.id
-          else
-            Author.create('Name' => author.name).id
-          end
-      end
-      author_ids
-    end
+    author_ids
+  end
 end
