@@ -1,0 +1,11 @@
+version: '3'
+services:
+  script:
+    build: .
+    command: ruby importer.rb
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    stdin_open: true # Keep STDIN open even if not attached
+    tty: true # Allocate a pseudo-tty
