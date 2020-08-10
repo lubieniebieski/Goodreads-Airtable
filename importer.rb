@@ -8,21 +8,21 @@ require_relative 'book'
 
 class Importer
   USER_ID = ENV['USER_ID']
-  READ    = 'read'
+  READ = 'read'
   TO_READ = 'to-read'
+  PER_PAGE = 50
 
   def self.import_from_goodreads
     existing_books = Book.all
-    shelf = get_shelf(TO_READ)
+    shelf_books = get_shelf_books(TO_READ)
     logger.info("Starting shelf: #{TO_READ}")
-    import_from_shelf(shelf, existing_books)
+    import_from_shelf_books(shelf_books, existing_books)
     logger.info("Starting shelf: #{READ}")
-    shelf = get_shelf(READ)
-    import_from_shelf(shelf, existing_books, true)
+    shelf_books = get_shelf_books(READ)
+    import_from_shelf_books(shelf_books, existing_books, true)
   end
 
-  def self.import_from_shelf(shelf, existing_books, mark_read = false)
-    books = shelf.books
+  def self.import_from_shelf_books(books, existing_books, mark_read = false)
     books_length = books.length
     books.each_with_index do |shelf_book, idx|
       book = shelf_book.book
@@ -45,8 +45,20 @@ class Importer
     @logger ||= Logger.new($stdout)
   end
 
-  def self.get_shelf(shelf_name)
-    GoodreadsClient::Client.shelf(USER_ID, shelf_name)
+  def self.get_shelf_books(shelf_name)
+    contents = []
+    page = 1
+    total = get_shelf_via_pagination(shelf_name, page).total
+    while contents.size < total
+      logger.info("Fetching page #{page}/#{(total / PER_PAGE).ceil + 1}")
+      contents += get_shelf_via_pagination(shelf_name, page).books
+      page += 1
+    end
+    contents.shuffle
+  end
+
+  def self.get_shelf_via_pagination(shelf_name, page)
+    GoodreadsClient::Client.shelf(USER_ID, shelf_name, per_page: PER_PAGE, page: page)
   end
 end
 
