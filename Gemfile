@@ -1,8 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'goodreads'
 gem 'airrecord'
 gem 'byebug'
-gem 'pry'
-
+gem 'goodreads'
+gem 'pry', require: false
 gem 'rubocop', require: false
