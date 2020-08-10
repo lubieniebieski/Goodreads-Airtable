@@ -142,7 +142,7 @@ class Book < Airrecord::Table
         if existing_author
           existing_author.id
         else
-          Author.create('Name' => author.name).id
+          Author.create_from_goodreads(author).id
         end
     end
     author_ids
