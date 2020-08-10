@@ -5,9 +5,9 @@ require_relative 'goodreads_client'
 require_relative 'book'
 
 class Importer
-  USER_ID = 96047798
   READ    = 'read'
   TO_READ = 'to-read'
+  USER_ID = ENV['USER_ID']
 
   def self.import_from_goodreads
     existing_books = Book.all

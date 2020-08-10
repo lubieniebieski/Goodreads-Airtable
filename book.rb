@@ -5,7 +5,7 @@ require_relative 'category'
 require_relative 'goodreads_client'
 
 class Book < Airrecord::Table
-  self.base_key = 'apppDHg8PasCSBhei'
+  self.base_key = ENV['AIRTABLE_BASE_KEY']
   self.table_name = 'Books'
 
   GOODREADS_BLACKLIST = %w(
