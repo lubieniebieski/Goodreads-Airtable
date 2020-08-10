@@ -1,6 +1,5 @@
 require 'byebug'
 require_relative 'author'
-require_relative 'serie'
 require_relative 'category'
 require_relative 'goodreads_client'
 
@@ -57,12 +56,9 @@ class Book < Airrecord::Table
     self['Title']             = book.title_without_series
     self['Cover']             = create_cover(book)
     self['Categories']        = create_categories(goodreads_categories)
-    series, series_number     = create_series(book.title)
-    self['Series']            = series
-    self['Series Number']     = series_number
     self['Publication Year']  = book.publication_year.to_s unless book.publication_year.blank?
     self['Goodreads Rating']  = book.average_rating.to_f
-    self['Personal Rating']   = personal_rating if personal_rating > 0
+    self['Personal Rating']   = personal_rating if personal_rating.positive?
     self['Goodreads URL']     = book.link
     self['Pages']             = book.num_pages.to_i
     authors                   = [book.authors.author].flatten
@@ -134,22 +130,6 @@ class Book < Airrecord::Table
 
   def goodreads_client
     GoodreadsClient::Client
-  end
-
-  # Create or find Series
-  def create_series(title)
-    return [], nil unless title[/\((.*?)\)/]
-
-    series_title_with_number = title[/\((.*?)\)/][1..-2]
-    series_title = series_title_with_number.split('#')[0].tr('^a-zA-Z ', '').strip
-    series_number = series_title_with_number.split('#')[1].to_s.tr('^0-9.-', '')
-
-    existing_serie = Serie.all.find { |a| a['Title'] == series_title }
-    if existing_serie
-      [[existing_serie.id], series_number]
-    else
-      [[Serie.create('Title' => series_title).id], series_number]
-    end
   end
 
   # Create or find author
