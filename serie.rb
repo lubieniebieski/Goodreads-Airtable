@@ -5,6 +5,6 @@ class Serie < Airrecord::Table
   # Create a Book record from a Goodreads API request
   def create_from_goodreads(series)
     self['Title'] = series.title
-    self.save
+    save
   end
 end

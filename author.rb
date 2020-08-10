@@ -4,6 +4,6 @@ class Author < Airrecord::Table
 
   def create_from_goodreads(author)
     self['Name'] = author.name
-    self.save
+    save
   end
 end
